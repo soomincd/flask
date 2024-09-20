@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edmakers</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        .current-passwords, .changed-passwords {
+            background-color: #f8f8f8;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .flash-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>암호 변경 페이지</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label for="user_code">새 관리자 코드:</label>
+                <input type="text" name="user_code" id="user_code" value="{{ current_user_code }}" required>
+            </div>
+            <div class="form-group">
+                <label for="admin_code">새 사용자 코드:</label>
+                <input type="text" name="admin_code" id="admin_code" value="{{ current_admin_code }}" required>
+            </div>
+            <button type="submit">변경</button>
+        </form>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if changed %}
+            <div class="changed-passwords">
+                <p>변경된 관리자 코드: {{ new_user_code }}</p>
+                <p>변경된 사용자 코드: {{ new_admin_code }}</p>
+            </div>
+        {% endif %}
+        <div class="current-passwords">
+            <p>현재 관리자 코드: {{ current_user_code }}</p>
+            <p>현재 사용자 코드: {{ current_admin_code }}</p>
+        </div>
+    </div>
+</body>
+</html>
