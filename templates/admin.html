@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edmakers</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
+        }
+        .container.wide {
+            max-width: 1200px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1.1rem;
+        }
+        button {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1.2rem;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .flash-message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 1.1rem;
+        }
+        .flash-message.success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .flash-message.error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 15px;
+            text-align: center;
+            font-size: 1rem;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        th:nth-child(1), td:nth-child(1) { width: 15%; }
+        th:nth-child(2), td:nth-child(2) { width: 40%; }
+        th:nth-child(3), td:nth-child(3) { width: 20%; }
+        th:nth-child(4), td:nth-child(4) { width: 15%; }
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            margin: 8px;
+            background-color: #2e303254;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+            font-size: 1.1rem;
+        }
+        .btn:hover {
+            background-color: #1011127f;
+        }
+        .btn-danger {
+            background-color: #3498db;
+        }
+        .btn-danger:hover {
+            background-color: #0056b3;
+        }
+        .button-container {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+        .right-align {
+            float: right;
+        }
+        .password-hash {
+            max-width: 300px;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        .action-cell {
+            text-align: center;
+        }
+    </style>
+    <script>
+        function confirmDelete(userId) {
+            if (confirm("정말 삭제하시겠습니까?")) {
+                document.getElementById('deleteForm' + userId).submit();
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container wide">
+        <h1>Admin Panel</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="button-container">
+            <a href="{{ url_for('register') }}" class="btn right-align">Add New User</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Password Hash</th>
+                    <th>Expiry Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td class="password-hash">{{ user.password }}</td>
+                        <td>{{ user.expiry_date.strftime('%Y-%m-%d') }}</td>
+                        <td class="action-cell">
+                            <form id="deleteForm{{ user.id }}" method="POST">
+                                <input type="hidden" name="delete" value="{{ user.id }}">
+                                <button type="button" class="btn btn-danger" onclick="confirmDelete('{{ user.id }}')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
