@@ -79,3 +79,7 @@ tzdata==2024.1
 urllib3==2.2.2
 wcwidth==0.2.8
 gunicorn
+Flask==2.0.1
+gunicorn==20.1.0
+Werkzeug==2.0.1
+Flask-SQLAlchemy==2.5.1
