@@ -58,7 +58,7 @@ def admin():
                 db.session.delete(user)
                 db.session.commit()
                 flash('User deleted successfully', 'success')
-    
+
     # 만료된 사용자 자동 삭제
     expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
     for user in expired_users:
@@ -66,20 +66,9 @@ def admin():
     if expired_users:
         db.session.commit()
         flash(f'{len(expired_users)} expired user(s) have been automatically deleted.', 'info')
-    
+
     # 사용자를 만료일 순으로 정렬
     users = User.query.order_by(User.expiry_date).all()
-    return render_template('admin.html', users=users)
-    
-    # 만료된 사용자 자동 삭제
-    expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
-    for user in expired_users:
-        db.session.delete(user)
-    if expired_users:
-        db.session.commit()
-        flash(f'{len(expired_users)} expired user(s) have been automatically deleted.', 'info')
-    
-    users = User.query.all()
     return render_template('admin.html', users=users)
 
 @app.route('/register', methods=['GET', 'POST'])
