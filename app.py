@@ -41,12 +41,12 @@ def login():
         if user and check_password_hash(user.password, password):
             if user.expiry_date < datetime.utcnow():
                 flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
-                return render_template('login.html')
+                return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
             login_user(user)
             # 여기에 Streamlit 페이지 URL을 입력하세요
             return redirect('https://edmakers-gpt.streamlit.app/')
         flash('ID 혹은 비밀번호가 잘못되었습니다.', 'error')
-    return render_template('login.html')
+    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -82,22 +82,21 @@ def register():
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and check_password_hash(existing_user.password, password):
             flash('사용할 수 없는 계정입니다. 비밀번호를 변경해주세요.', 'error')
-            return render_template('register.html')
+            return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
         
         hashed_password = generate_password_hash(password)
         new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
         db.session.add(new_user)
         db.session.commit()
         flash('등록이 완료되었습니다.', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html')
+    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash('로그아웃합니다.', 'info')
-    return redirect(url_for('login'))
+    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
 
 # 암호 코드를 저장하는 함수
 def save_codes(user_code, admin_code):
@@ -123,13 +122,13 @@ def login_page():
         secret_code = request.form.get('secret_code')
         if secret_code == codes["admin_code"]:
             flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
-            return redirect("index.html")  # 1111 입력 시 네이버로 이동
+            return redirect("https://edmakers-0804e31d8eb9.herokuapp.com/index")  # 1111 입력 시 네이버로 이동
         elif secret_code == codes["user_code"]:
             flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
             return redirect('https://edmakers-gpt.streamlit.app/')  # 2222 입력 시 인덱스 페이지로 이동
         else:
             flash("잘못된 코드입니다.", "error")
-            return redirect(url_for('login_page'))
+            return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/cod')
     return render_template('login.html')
 
 @app.route('/index')
@@ -143,7 +142,7 @@ def set_code_page():
         new_admin_code = request.form.get('admin_code')
         save_codes(new_user_code, new_admin_code)  # 암호 저장
         flash(f"관리자 코드는 {new_admin_code}, 사용자 코드는 {new_user_code}로 변경되었습니다.")
-        return redirect(url_for('set_code_page'))  # 암호 설정 페이지로 리디렉션
+        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/set_code')  # 암호 설정 페이지로 리디렉션
     codes = load_codes()  # 항상 최신 코드를 불러옴
     return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
 
