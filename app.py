@@ -131,6 +131,22 @@ def login_page():
             return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/cod')
     return render_template('login.html')
 
+@app.route('/cod', methods=['GET', 'POST'])
+def cod():
+    codes = load_codes()  # 코드를 로드합니다
+    if request.method == 'POST':
+        secret_code = request.form.get('secret_code')
+        if secret_code == codes["admin_code"]:
+            flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
+            return redirect(url_for("index"))  # 관리자 페이지로 리다이렉트
+        elif secret_code == codes["user_code"]:
+            flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
+            return redirect('https://edmakers-gpt.streamlit.app/')  # Chat GPT 페이지로 리다이렉트
+        else:
+            flash("잘못된 코드입니다.", "error")
+            return redirect(url_for("cod"))
+    return render_template('cod.html')
+
 @app.route('/index')
 def index():
     return render_template('index.html')
@@ -145,6 +161,29 @@ def set_code_page():
         return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/set_code')  # 암호 설정 페이지로 리디렉션
     codes = load_codes()  # 항상 최신 코드를 불러옴
     return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        if 'delete' in request.form:
+            user_id = request.form['delete']
+            user = User.query.get(user_id)
+            if user:
+                db.session.delete(user)
+                db.session.commit()
+                flash('사용자가 성공적으로 삭제되었습니다.', 'success')
+
+    # 만료된 사용자 자동 삭제
+    expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
+    for user in expired_users:
+        db.session.delete(user)
+    if expired_users:
+        db.session.commit()
+        flash(f'{len(expired_users)} 명의 만료된 사용자(들)이 자동으로 삭제되었습니다.', 'info')
+
+    # 사용자를 만료일 순으로 정렬
+    users = User.query.order_by(User.expiry_date).all()
+    return render_template('admin.html', users=users)
 
 if __name__ == '__main__':
     with app.app_context():
