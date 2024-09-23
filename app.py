@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import json
-from flask import Flask, send_from_directory
 
 load_dotenv()
 
@@ -27,7 +26,6 @@ class User(UserMixin, db.Model):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.png', mimetype='image/png')
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -43,7 +41,6 @@ def login():
                 flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
                 return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
             login_user(user)
-            # 여기에 Streamlit 페이지 URL을 입력하세요
             return redirect('https://edmakers-gpt.streamlit.app/')
         flash('ID 혹은 비밀번호가 잘못되었습니다.', 'error')
     return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
@@ -59,7 +56,6 @@ def admin():
                 db.session.commit()
                 flash('사용자가 성공적으로 삭제되었습니다.', 'success')
 
-    # 만료된 사용자 자동 삭제
     expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
     for user in expired_users:
         db.session.delete(user)
@@ -67,7 +63,6 @@ def admin():
         db.session.commit()
         flash(f'{len(expired_users)} 명의 만료된 사용자(들)이 자동으로 삭제되었습니다.', 'info')
 
-    # 사용자를 만료일 순으로 정렬
     users = User.query.order_by(User.expiry_date).all()
     return render_template('admin.html', users=users)
 
@@ -98,7 +93,6 @@ def logout():
     flash('로그아웃합니다.', 'info')
     return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
 
-# 암호 코드를 저장하는 함수
 def save_codes(user_code, admin_code):
     codes = {
         "user_code": user_code,
@@ -107,25 +101,24 @@ def save_codes(user_code, admin_code):
     with open('codes.json', 'w') as f:
         json.dump(codes, f)
 
-# 암호 코드를 불러오는 함수
 def load_codes():
     try:
         with open('codes.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        return {"user_code": "5678", "admin_code": "1234"}  # 기본값
+        return {"user_code": "5678", "admin_code": "1234"}
 
 @app.route('/', methods=['GET', 'POST'])
 def login_page():
-    codes = load_codes()  # 항상 최신 코드를 불러옴
+    codes = load_codes()
     if request.method == 'POST':
         secret_code = request.form.get('secret_code')
         if secret_code == codes["admin_code"]:
             flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
-            return redirect("https://edmakers-0804e31d8eb9.herokuapp.com/index")  # 1111 입력 시 네이버로 이동
+            return redirect("https://edmakers-0804e31d8eb9.herokuapp.com/index")
         elif secret_code == codes["user_code"]:
             flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
-            return redirect('https://edmakers-gpt.streamlit.app/')  # 2222 입력 시 인덱스 페이지로 이동
+            return redirect('https://edmakers-gpt.streamlit.app/')
         else:
             flash("잘못된 코드입니다.", "error")
             return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/cod')
@@ -133,15 +126,15 @@ def login_page():
 
 @app.route('/cod', methods=['GET', 'POST'])
 def cod():
-    codes = load_codes()  # 코드를 로드합니다
+    codes = load_codes()
     if request.method == 'POST':
         secret_code = request.form.get('secret_code')
         if secret_code == codes["admin_code"]:
             flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
-            return redirect(url_for("index"))  # 관리자 페이지로 리다이렉트
+            return redirect(url_for("index"))
         elif secret_code == codes["user_code"]:
             flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
-            return redirect('https://edmakers-gpt.streamlit.app/')  # Chat GPT 페이지로 리다이렉트
+            return redirect('https://edmakers-gpt.streamlit.app/')
         else:
             flash("잘못된 코드입니다.", "error")
             return redirect(url_for("cod"))
@@ -156,34 +149,11 @@ def set_code_page():
     if request.method == 'POST':
         new_user_code = request.form.get('user_code')
         new_admin_code = request.form.get('admin_code')
-        save_codes(new_user_code, new_admin_code)  # 암호 저장
+        save_codes(new_user_code, new_admin_code)
         flash(f"관리자 코드는 {new_admin_code}, 사용자 코드는 {new_user_code}로 변경되었습니다.")
-        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/set_code')  # 암호 설정 페이지로 리디렉션
-    codes = load_codes()  # 항상 최신 코드를 불러옴
+        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/set_code')
+    codes = load_codes()
     return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if request.method == 'POST':
-        if 'delete' in request.form:
-            user_id = request.form['delete']
-            user = User.query.get(user_id)
-            if user:
-                db.session.delete(user)
-                db.session.commit()
-                flash('사용자가 성공적으로 삭제되었습니다.', 'success')
-
-    # 만료된 사용자 자동 삭제
-    expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
-    for user in expired_users:
-        db.session.delete(user)
-    if expired_users:
-        db.session.commit()
-        flash(f'{len(expired_users)} 명의 만료된 사용자(들)이 자동으로 삭제되었습니다.', 'info')
-
-    # 사용자를 만료일 순으로 정렬
-    users = User.query.order_by(User.expiry_date).all()
-    return render_template('admin.html', users=users)
 
 if __name__ == '__main__':
     with app.app_context():
