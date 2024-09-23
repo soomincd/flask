@@ -40,12 +40,12 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             if user.expiry_date < datetime.utcnow():
-                flash('Your account has expired. Please contact the administrator.', 'error')
+                flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
                 return render_template('login.html')
             login_user(user)
             # 여기에 Streamlit 페이지 URL을 입력하세요
-            return redirect('https://your-streamlit-app-url.com')
-        flash('Invalid username or password', 'error')
+            return redirect('https://edmakers-gpt.streamlit.app/')
+        flash('ID 혹은 비밀번호가 잘못되었습니다.', 'error')
     return render_template('login.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -57,7 +57,7 @@ def admin():
             if user:
                 db.session.delete(user)
                 db.session.commit()
-                flash('User deleted successfully', 'success')
+                flash('사용자가 성공적으로 삭제되었습니다.', 'success')
 
     # 만료된 사용자 자동 삭제
     expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
@@ -65,7 +65,7 @@ def admin():
         db.session.delete(user)
     if expired_users:
         db.session.commit()
-        flash(f'{len(expired_users)} expired user(s) have been automatically deleted.', 'info')
+        flash(f'{len(expired_users)} 명의 만료된 사용자(들)이 자동으로 삭제되었습니다.', 'info')
 
     # 사용자를 만료일 순으로 정렬
     users = User.query.order_by(User.expiry_date).all()
@@ -81,14 +81,14 @@ def register():
         
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and check_password_hash(existing_user.password, password):
-            flash('Username already exists with the same password.', 'error')
+            flash('사용할 수 없는 계정입니다. 비밀번호를 변경해주세요.', 'error')
             return render_template('register.html')
         
         hashed_password = generate_password_hash(password)
         new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
         db.session.add(new_user)
         db.session.commit()
-        flash('Registration successful. You can now log in.', 'success')
+        flash('등록이 완료되었습니다.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -96,7 +96,7 @@ def register():
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
+    flash('로그아웃합니다.', 'info')
     return redirect(url_for('login'))
 
 # 암호 코드를 저장하는 함수
@@ -122,11 +122,11 @@ def login_page():
     if request.method == 'POST':
         secret_code = request.form.get('secret_code')
         if secret_code == codes["admin_code"]:
-            flash("관리자 코드가 입력되었습니다. 네이버로 이동합니다.")
-            return redirect("https://www.naver.com")  # 1111 입력 시 네이버로 이동
+            flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
+            return redirect("index.html")  # 1111 입력 시 네이버로 이동
         elif secret_code == codes["user_code"]:
-            flash("사용자 코드가 입력되었습니다. 인덱스 페이지로 이동합니다.")
-            return redirect(url_for('index'))  # 2222 입력 시 인덱스 페이지로 이동
+            flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
+            return redirect('https://edmakers-gpt.streamlit.app/')  # 2222 입력 시 인덱스 페이지로 이동
         else:
             flash("잘못된 코드입니다.", "error")
             return redirect(url_for('login_page'))
