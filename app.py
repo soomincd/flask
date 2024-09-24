@@ -17,11 +17,13 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-# DATABASE_URL 처리
-uri = os.getenv("DATABASE_URL")
-if uri.startswith("postgres://"):
-    uri = uri.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = uri
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL is None:
+    logger.error("DATABASE_URL is not set.")
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///site.db"
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 logger.info(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -92,14 +94,15 @@ def register():
         existing_user = User.query.filter_by(username=username).first()
         if existing_user and check_password_hash(existing_user.password, password):
             flash('사용할 수 없는 계정입니다. 비밀번호를 변경해주세요.', 'error')
-            return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
+            return redirect(url_for('register'))
         
         hashed_password = generate_password_hash(password)
         new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
         db.session.add(new_user)
         db.session.commit()
         flash('등록이 완료되었습니다.', 'success')
-    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
+        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
+    return render_template('register.html')
 
 @app.route('/logout')
 @login_required
