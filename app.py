@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import jsonify
 import json
+from flask_cors import CORS
 
 load_dotenv()
 
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
