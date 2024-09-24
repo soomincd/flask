@@ -1,25 +1,25 @@
 import os
 import logging
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from flask import jsonify
 import json
 from flask_cors import CORS
-
+from flask_session import Session
 
 load_dotenv()
 
-# 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-CORS(app)
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
+CORS(app, supports_credentials=True)
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 if DATABASE_URL is None:
@@ -36,51 +36,40 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     expiry_date = db.Column(db.DateTime, nullable=False)
-
-@app.route('/favicon.png')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.png', mimetype='image/png')
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
-            if user.expiry_date < datetime.utcnow():
-                flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
-                return redirect(url_for('login'))
-            login_user(user)
-            return redirect(url_for('index'))  # 또는 다른 메인 페이지로 리다이렉트
-        flash('아이디 또는 비밀번호가 잘못되었습니다.', 'error')
     return render_template('login.html')
-    
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    app.logger.info(f"Login attempt for user: {username}")
     user = User.query.filter_by(username=username).first()
     if user and check_password_hash(user.password, password):
+        app.logger.info(f"Password check passed for user: {username}")
         if user.expiry_date < datetime.utcnow():
+            app.logger.info(f"Account expired for user: {username}")
             return jsonify({'message': '계정이 만료되었습니다. 관리자에게 문의하세요.', 'category': 'error'}), 401
         login_user(user)
+        app.logger.info(f"User logged in successfully: {username}")
         return jsonify({'message': '로그인 성공', 'redirect': 'https://edmakers-gpt.streamlit.app/'})
+    app.logger.info(f"Login failed for user: {username}")
     return jsonify({'message': 'ID 혹은 비밀번호가 잘못되었습니다.', 'category': 'error'}), 401
 
 @app.route('/admin')
+@login_required
 def admin():
     users = User.query.order_by(User.expiry_date).all()
     return render_template('admin.html', users=users)
@@ -168,8 +157,6 @@ def login_page():
 def cod():
     return render_template('cod.html')
 
-
-
 @app.route('/api/check_code', methods=['POST'])
 def check_code():
     secret_code = request.json.get('secret_code')
@@ -201,8 +188,13 @@ def api_set_code():
         'new_admin_code': new_admin_code
     })
 
+@app.route('/api/check_login')
+@login_required
+def check_login():
+    return jsonify({'logged_in': True, 'username': current_user.username})
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
