@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edmakers</title>
+    <title>Edmakers - Admin Panel</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <style>
         body {
@@ -146,17 +146,11 @@
 <body>
     <div class="container wide">
         <h1>Admin Panel</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <div id="flash-messages"></div>
         <div class="button-container">
             <a href="{{ url_for('register') }}" class="btn right-align">Add New User</a>
         </div>
-        <table>
+        <table id="users-table">
             <thead>
                 <tr>
                     <th>사용자</th>
@@ -167,20 +161,72 @@
             </thead>
             <tbody>
                 {% for user in users %}
-                    <tr>
+                    <tr id="user-{{ user.id }}">
                         <td>{{ user.username }}</td>
                         <td class="password-hash">{{ user.password }}</td>
                         <td>{{ user.expiry_date.strftime('%Y-%m-%d') }}</td>
                         <td class="action-cell">
-                            <form id="deleteForm{{ user.id }}" method="POST">
-                                <input type="hidden" name="delete" value="{{ user.id }}">
-                                <button type="button" class="btn btn-danger" onclick="confirmDelete('{{ user.id }}')">Delete</button>
-                            </form>
+                            <button class="btn btn-danger" onclick="deleteUser(this)" data-user-id="{{ user.id }}">Delete</button>
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <script>
+        function deleteUser(element) {
+            const userId = element.getAttribute('data-user-id');
+            if (confirm("정말 삭제하시겠습니까?")) {
+                fetch('/api/delete_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({user_id: userId}),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`user-${userId}`).remove();
+                        showFlashMessage('사용자가 성공적으로 삭제되었습니다.', 'success');
+                    } else {
+                        showFlashMessage('사용자 삭제 중 오류가 발생했습니다.', 'error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    showFlashMessage('사용자 삭제 중 오류가 발생했습니다.', 'error');
+                });
+            }
+        }
+
+        function showFlashMessage(message, category) {
+            const flashDiv = document.getElementById('flash-messages');
+            flashDiv.innerHTML = `<div class="flash-message ${category}">${message}</div>`;
+            setTimeout(() => {
+                flashDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // 페이지 로드 시 만료된 사용자 삭제
+        fetch('/api/delete_expired_users', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.deleted > 0) {
+                showFlashMessage(`${data.deleted}명의 만료된 사용자(들)이 자동으로 삭제되었습니다.`, 'info');
+                // 테이블에서 만료된 사용자 행 제거
+                data.expired_ids.forEach(id => {
+                    const row = document.getElementById(`user-${id}`);
+                    if (row) row.remove();
+                });
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    </script>
 </body>
 </html>
