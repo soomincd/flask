@@ -1,74 +1,86 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edmakers Chat-GPT</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <title>Edmakers - 코드 입력</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            min-height: 100vh;
         }
         .container {
             background-color: white;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 300px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
         }
         h1 {
             text-align: center;
             color: #333;
-            margin-bottom: 20px;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
         }
         form {
             display: flex;
             flex-direction: column;
         }
-        input {
-            margin: 10px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        input[type="text"] {
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 1rem;
         }
         button {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #4285f4;
+            padding: 1rem;
+            font-size: 1.2rem;
+            background-color: #3498db;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #3367d6;
+            background-color: #2980b9;
+        }
+        #flash-messages {
+            margin-top: 1rem;
         }
         .flash-message {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
+            padding: 1rem;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        .flash-message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .flash-message.error {
             background-color: #f8d7da;
             color: #721c24;
-            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>코드 입력</h1>
-        <div id="flash-messages"></div>
         <form id="code-form">
             <input type="text" name="secret_code" placeholder="코드를 입력하세요" required>
             <button type="submit">확인</button>
         </form>
+        <div id="flash-messages"></div>
     </div>
 
     <script>
