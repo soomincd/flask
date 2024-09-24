@@ -1,15 +1,13 @@
 import os
 import logging
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from flask import jsonify
 import json
 from flask_cors import CORS
-
 
 load_dotenv()
 
@@ -18,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -36,36 +34,23 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     expiry_date = db.Column(db.DateTime, nullable=False)
 
 @app.route('/favicon.png')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.png', mimetype='image/png')
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.png', mimetype='image/png')
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
-            if user.expiry_date < datetime.utcnow():
-                flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
-                return redirect(url_for('login'))
-            login_user(user)
-            return redirect(url_for('index'))  # 또는 다른 메인 페이지로 리다이렉트
-        flash('아이디 또는 비밀번호가 잘못되었습니다.', 'error')
     return render_template('login.html')
-    
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
@@ -81,11 +66,13 @@ def api_login():
     return jsonify({'message': 'ID 혹은 비밀번호가 잘못되었습니다.', 'category': 'error'}), 401
 
 @app.route('/admin')
+@login_required
 def admin():
     users = User.query.order_by(User.expiry_date).all()
     return render_template('admin.html', users=users)
 
 @app.route('/api/delete_user', methods=['POST'])
+@login_required
 def delete_user():
     user_id = request.json.get('user_id')
     user = User.query.get(user_id)
@@ -96,6 +83,7 @@ def delete_user():
     return jsonify({'success': False}), 404
 
 @app.route('/api/delete_expired_users', methods=['POST'])
+@login_required
 def delete_expired_users():
     expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
     deleted_count = len(expired_users)
@@ -111,9 +99,10 @@ def register():
 
 @app.route('/api/register', methods=['POST'])
 def api_register():
-    username = request.json.get('username')
-    password = request.json.get('password')
-    expiry_days = int(request.json.get('expiry_days'))
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    expiry_days = int(data.get('expiry_days'))
     expiry_date = datetime.utcnow() + timedelta(days=expiry_days)
     
     existing_user = User.query.filter_by(username=username).first()
@@ -130,8 +119,7 @@ def api_register():
 @login_required
 def logout():
     logout_user()
-    flash('로그아웃합니다.', 'info')
-    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
+    return jsonify({'message': '로그아웃되었습니다.', 'category': 'info'})
 
 def save_codes(user_code, admin_code):
     codes = {
@@ -148,52 +136,43 @@ def load_codes():
     except FileNotFoundError:
         return {"user_code": "5678", "admin_code": "1234"}
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def login_page():
-    codes = load_codes()
-    if request.method == 'POST':
-        secret_code = request.form.get('secret_code')
-        if secret_code == codes["admin_code"]:
-            flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
-            return redirect("https://edmakers-0804e31d8eb9.herokuapp.com/index")
-        elif secret_code == codes["user_code"]:
-            flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
-            return redirect('https://edmakers-gpt.streamlit.app/')
-        else:
-            flash("잘못된 코드입니다.", "error")
-            return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/cod')
     return render_template('login.html')
 
 @app.route('/cod')
 def cod():
     return render_template('cod.html')
 
-
-
 @app.route('/api/check_code', methods=['POST'])
 def check_code():
-    secret_code = request.json.get('secret_code')
+    data = request.get_json()
+    secret_code = data.get('secret_code')
     codes = load_codes()
     if secret_code == codes["admin_code"]:
-        return jsonify({"message": "관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.", "redirect": url_for("index")})
+        return jsonify({"message": "관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.", "redirect": url_for("index", _external=True)})
     elif secret_code == codes["user_code"]:
         return jsonify({"message": "사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.", "redirect": 'https://edmakers-gpt.streamlit.app/'})
     else:
-        return jsonify({"message": "잘못된 코드입니다.", "redirect": url_for("cod")}), 400
+        return jsonify({"message": "잘못된 코드입니다.", "redirect": url_for("cod", _external=True)}), 400
 
 @app.route('/index')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/set_code')
+@login_required
 def set_code_page():
     codes = load_codes()
     return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
 
 @app.route('/api/set_code', methods=['POST'])
+@login_required
 def api_set_code():
-    new_user_code = request.json.get('user_code')
-    new_admin_code = request.json.get('admin_code')
+    data = request.get_json()
+    new_user_code = data.get('user_code')
+    new_admin_code = data.get('admin_code')
     save_codes(new_user_code, new_admin_code)
     return jsonify({
         'message': f"관리자 코드는 {new_admin_code}, 사용자 코드는 {new_user_code}로 변경되었습니다.",
