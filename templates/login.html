@@ -26,25 +26,30 @@
                 password: formData.get('password')
             };
             fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData),
-            })
-            .then(response => response.json())
-            .then(data => {
-                showFlashMessage(data.message, data.category || 'success');
-                if (data.redirect) {
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 2000);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showFlashMessage('로그인 중 오류가 발생했습니다.', 'error');
-            });
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(loginData),
+})
+.then(response => {
+    if (!response.ok) {
+        throw new Error('Network response was not ok');
+    }
+    return response.json();
+})
+.then(data => {
+    showFlashMessage(data.message, data.category || 'success');
+    if (data.redirect) {
+        setTimeout(() => {
+            window.location.href = data.redirect;
+        }, 2000);
+    }
+})
+.catch(error => {
+    console.error('Error:', error);
+    showFlashMessage('로그인 중 오류가 발생했습니다.', 'error');
+});
         });
         function showFlashMessage(message, category) {
             const flashDiv = document.getElementById('flash-messages');
