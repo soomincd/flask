@@ -1,93 +1,111 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edmakers</title>
+    <title>Edmakers Chat-GPT</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100vh;
+            margin: 0;
         }
         .container {
             background-color: white;
-            padding: 3rem;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.15);
-            width: 90%;
-            max-width: 500px;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 300px;
         }
         h1 {
             text-align: center;
             color: #333;
-            font-size: 2.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 20px;
         }
         form {
             display: flex;
             flex-direction: column;
         }
         input {
-            margin: 15px 0;
-            padding: 15px;
+            margin: 10px 0;
+            padding: 10px;
             border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 1.1rem;
+            border-radius: 4px;
         }
         button {
-            margin-top: 25px;
-            padding: 15px;
-            background-color: #3498db;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4285f4;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 1.2rem;
+            font-size: 16px;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #3367d6;
         }
         .flash-message {
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            font-size: 1.1rem;
-        }
-        .flash-message.success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-            color: #155724;
-        }
-        .flash-message.error {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
             background-color: #f8d7da;
-            border-color: #f5c6cb;
             color: #721c24;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Edmakers Chat GPT</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <form method="POST" action="{{ url_for('cod') }}">
-            <input type="password" name="secret_code" placeholder="암호 코드를 입력하세요" required>
+        <h1>코드 입력</h1>
+        <div id="flash-messages"></div>
+        <form id="code-form">
+            <input type="text" name="secret_code" placeholder="코드를 입력하세요" required>
             <button type="submit">확인</button>
         </form>
     </div>
+
+    <script>
+        document.getElementById('code-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const secretCode = this.elements.secret_code.value;
+            
+            fetch('/api/check_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({secret_code: secretCode}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                showFlashMessage(data.message, data.redirect ? 'success' : 'error');
+                if (data.redirect) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('오류가 발생했습니다.', 'error');
+            });
+        });
+
+        function showFlashMessage(message, category) {
+            const flashDiv = document.getElementById('flash-messages');
+            flashDiv.innerHTML = `<div class="flash-message ${category}">${message}</div>`;
+            setTimeout(() => {
+                flashDiv.innerHTML = '';
+            }, 5000);
+        }
+    </script>
 </body>
 </html>
