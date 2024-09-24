@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edmakers - 코드 입력</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -75,7 +76,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>코드 입력</h1>
+        <h1>암호 코드 입력</h1>
         <form id="code-form">
             <input type="text" name="secret_code" placeholder="코드를 입력하세요" required>
             <button type="submit">확인</button>
