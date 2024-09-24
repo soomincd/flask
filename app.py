@@ -10,6 +10,7 @@ from flask import jsonify
 import json
 from flask_cors import CORS
 
+
 load_dotenv()
 
 # 로깅 설정
@@ -166,6 +167,8 @@ def login_page():
 @app.route('/cod')
 def cod():
     return render_template('cod.html')
+
+
 
 @app.route('/api/check_code', methods=['POST'])
 def check_code():
