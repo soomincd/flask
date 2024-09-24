@@ -1,28 +1,20 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edmakers</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Register New User</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash-message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="number" name="expiry_days" placeholder="Account expiry (days)" required>
-            <button type="submit"> 회원가입 </button>
-        </form>
-    </div>
-</body>
-</html>
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    expiry_days = int(request.json.get('expiry_days'))
+    expiry_date = datetime.utcnow() + timedelta(days=expiry_days)
+    
+    existing_user = User.query.filter_by(username=username).first()
+    if existing_user:
+        return jsonify({'message': '이미 존재하는 사용자명입니다.', 'category': 'error'}), 400
+    
+    hashed_password = generate_password_hash(password)
+    new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': '등록이 완료되었습니다.', 'category': 'success'})
