@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edmakers</title>
+    <title>Edmakers - 암호 변경 페이지</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    
     <style>
+
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -78,34 +78,70 @@
 <body>
     <div class="container">
         <h1>암호 변경 페이지</h1>
-        <form method="POST">
+        <form id="code-form">
             <div class="form-group">
-                <label for="user_code">새 관리자 코드:</label>
+                <label for="user_code">새 사용자 코드:</label>
                 <input type="text" name="user_code" id="user_code" value="{{ current_user_code }}" required>
             </div>
             <div class="form-group">
-                <label for="admin_code">새 사용자 코드:</label>
+                <label for="admin_code">새 관리자 코드:</label>
                 <input type="text" name="admin_code" id="admin_code" value="{{ current_admin_code }}" required>
             </div>
             <button type="submit">변경</button>
         </form>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="flash-message">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        {% if changed %}
-            <div class="changed-passwords">
-                <p>변경된 관리자 코드: {{ new_user_code }}</p>
-                <p>변경된 사용자 코드: {{ new_admin_code }}</p>
-            </div>
-        {% endif %}
+        <div id="flash-messages"></div>
+        <div id="changed-passwords" style="display: none;" class="changed-passwords">
+            <p>변경된 사용자 코드: <span id="new-user-code"></span></p>
+            <p>변경된 관리자 코드: <span id="new-admin-code"></span></p>
+        </div>
         <div class="current-passwords">
-            <p>현재 관리자 코드: {{ current_user_code }}</p>
-            <p>현재 사용자 코드: {{ current_admin_code }}</p>
+            <p>현재 사용자 코드: {{ current_user_code }}</p>
+            <p>현재 관리자 코드: {{ current_admin_code }}</p>
         </div>
     </div>
+
+    <script>
+        document.getElementById('code-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const codeData = {
+                user_code: formData.get('user_code'),
+                admin_code: formData.get('admin_code')
+            };
+            
+            fetch('/api/set_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(codeData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                showFlashMessage(data.message, 'success');
+                document.getElementById('new-user-code').textContent = data.new_user_code;
+                document.getElementById('new-admin-code').textContent = data.new_admin_code;
+                document.getElementById('changed-passwords').style.display = 'block';
+                // 현재 코드 업데이트
+                document.querySelector('.current-passwords').innerHTML = `
+                    <p>현재 사용자 코드: ${data.new_user_code}</p>
+                    <p>현재 관리자 코드: ${data.new_admin_code}</p>
+                `;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFlashMessage('코드 변경 중 오류가 발생했습니다.', 'error');
+            });
+        });
+
+        function showFlashMessage(message, category) {
+            const flashDiv = document.getElementById('flash-messages');
+            flashDiv.innerHTML = `<div class="flash-message ${category}">${message}</div>`;
+            setTimeout(() => {
+                flashDiv.innerHTML = '';
+            }, 5000);
+        }
+    </script>
 </body>
 </html>
