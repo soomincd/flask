@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from flask import jsonify
 import json
-from flask_cors import CORS
-CORS(app)
 
 load_dotenv()
 
