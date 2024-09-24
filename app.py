@@ -6,6 +6,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from flask import jsonify
 import json
 
 load_dotenv()
@@ -47,62 +48,67 @@ def favicon():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login')
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
-            if user.expiry_date < datetime.utcnow():
-                flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
-                return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
-            login_user(user)
-            return redirect('https://edmakers-gpt.streamlit.app/')
-        flash('ID 혹은 비밀번호가 잘못되었습니다.', 'error')
-    return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/login')
+    return render_template('login.html')
 
-@app.route('/admin', methods=['GET', 'POST'])
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        if user.expiry_date < datetime.utcnow():
+            return jsonify({'message': '계정이 만료되었습니다. 관리자에게 문의하세요.', 'category': 'error'}), 401
+        login_user(user)
+        return jsonify({'message': '로그인 성공', 'redirect': 'https://edmakers-gpt.streamlit.app/'})
+    return jsonify({'message': 'ID 혹은 비밀번호가 잘못되었습니다.', 'category': 'error'}), 401
+
+@app.route('/admin')
 def admin():
-    if request.method == 'POST':
-        if 'delete' in request.form:
-            user_id = request.form['delete']
-            user = User.query.get(user_id)
-            if user:
-                db.session.delete(user)
-                db.session.commit()
-                flash('사용자가 성공적으로 삭제되었습니다.', 'success')
-
-    expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
-    for user in expired_users:
-        db.session.delete(user)
-    if expired_users:
-        db.session.commit()
-        flash(f'{len(expired_users)} 명의 만료된 사용자(들)이 자동으로 삭제되었습니다.', 'info')
-
     users = User.query.order_by(User.expiry_date).all()
     return render_template('admin.html', users=users)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        expiry_days = int(request.form['expiry_days'])
-        expiry_date = datetime.utcnow() + timedelta(days=expiry_days)
-        
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user and check_password_hash(existing_user.password, password):
-            flash('사용할 수 없는 계정입니다. 비밀번호를 변경해주세요.', 'error')
-            return redirect(url_for('register'))
-        
-        hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
-        db.session.add(new_user)
+@app.route('/api/delete_user', methods=['POST'])
+def delete_user():
+    user_id = request.json.get('user_id')
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
         db.session.commit()
-        flash('등록이 완료되었습니다.', 'success')
-        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/register')
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404
+
+@app.route('/api/delete_expired_users', methods=['POST'])
+def delete_expired_users():
+    expired_users = User.query.filter(User.expiry_date < datetime.utcnow()).all()
+    deleted_count = len(expired_users)
+    expired_ids = [user.id for user in expired_users]
+    for user in expired_users:
+        db.session.delete(user)
+    db.session.commit()
+    return jsonify({'deleted': deleted_count, 'expired_ids': expired_ids})
+
+@app.route('/register')
+def register():
     return render_template('register.html')
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    expiry_days = int(request.json.get('expiry_days'))
+    expiry_date = datetime.utcnow() + timedelta(days=expiry_days)
+    
+    existing_user = User.query.filter_by(username=username).first()
+    if existing_user:
+        return jsonify({'message': '이미 존재하는 사용자명입니다.', 'category': 'error'}), 400
+    
+    hashed_password = generate_password_hash(password)
+    new_user = User(username=username, password=hashed_password, expiry_date=expiry_date)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': '등록이 완료되었습니다.', 'category': 'success'})
 
 @app.route('/logout')
 @login_required
@@ -142,36 +148,40 @@ def login_page():
             return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/cod')
     return render_template('login.html')
 
-@app.route('/cod', methods=['GET', 'POST'])
+@app.route('/cod')
 def cod():
-    codes = load_codes()
-    if request.method == 'POST':
-        secret_code = request.form.get('secret_code')
-        if secret_code == codes["admin_code"]:
-            flash("관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.")
-            return redirect(url_for("index"))
-        elif secret_code == codes["user_code"]:
-            flash("사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.")
-            return redirect('https://edmakers-gpt.streamlit.app/')
-        else:
-            flash("잘못된 코드입니다.", "error")
-            return redirect(url_for("cod"))
     return render_template('cod.html')
+
+@app.route('/api/check_code', methods=['POST'])
+def check_code():
+    secret_code = request.json.get('secret_code')
+    codes = load_codes()
+    if secret_code == codes["admin_code"]:
+        return jsonify({"message": "관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.", "redirect": url_for("index")})
+    elif secret_code == codes["user_code"]:
+        return jsonify({"message": "사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.", "redirect": 'https://edmakers-gpt.streamlit.app/'})
+    else:
+        return jsonify({"message": "잘못된 코드입니다.", "redirect": url_for("cod")}), 400
 
 @app.route('/index')
 def index():
     return render_template('index.html')
 
-@app.route('/set_code', methods=['GET', 'POST'])
+@app.route('/set_code')
 def set_code_page():
-    if request.method == 'POST':
-        new_user_code = request.form.get('user_code')
-        new_admin_code = request.form.get('admin_code')
-        save_codes(new_user_code, new_admin_code)
-        flash(f"관리자 코드는 {new_admin_code}, 사용자 코드는 {new_user_code}로 변경되었습니다.")
-        return redirect('https://edmakers-0804e31d8eb9.herokuapp.com/set_code')
     codes = load_codes()
-    return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
+    return render_template('cod.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
+
+@app.route('/api/set_code', methods=['POST'])
+def api_set_code():
+    new_user_code = request.json.get('user_code')
+    new_admin_code = request.json.get('admin_code')
+    save_codes(new_user_code, new_admin_code)
+    return jsonify({
+        'message': f"관리자 코드는 {new_admin_code}, 사용자 코드는 {new_user_code}로 변경되었습니다.",
+        'new_user_code': new_user_code,
+        'new_admin_code': new_admin_code
+    })
 
 if __name__ == '__main__':
     with app.app_context():
