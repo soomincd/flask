@@ -170,7 +170,7 @@ def index():
 @app.route('/set_code')
 def set_code_page():
     codes = load_codes()
-    return render_template('cod.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
+    return render_template('set_code.html', current_user_code=codes["user_code"], current_admin_code=codes["admin_code"])
 
 @app.route('/api/set_code', methods=['POST'])
 def api_set_code():
