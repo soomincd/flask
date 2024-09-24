@@ -68,8 +68,9 @@ def login():
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    username = request.json.get('username')
-    password = request.json.get('password')
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
     user = User.query.filter_by(username=username).first()
     if user and check_password_hash(user.password, password):
         if user.expiry_date < datetime.utcnow():
