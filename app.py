@@ -48,9 +48,21 @@ def favicon():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
+            if user.expiry_date < datetime.utcnow():
+                flash('계정이 만료되었습니다. 관리자에게 문의하세요.', 'error')
+                return redirect(url_for('login'))
+            login_user(user)
+            return redirect(url_for('index'))  # 또는 다른 메인 페이지로 리다이렉트
+        flash('아이디 또는 비밀번호가 잘못되었습니다.', 'error')
     return render_template('login.html')
+    
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
