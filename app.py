@@ -77,7 +77,7 @@ def api_login():
         if user.expiry_date < datetime.utcnow():
             return jsonify({'message': '계정이 만료되었습니다. 관리자에게 문의하세요.', 'category': 'error'}), 401
         login_user(user)
-        return jsonify({'message': '로그인 성공', 'redirect': 'https://edmakers-gpt.streamlit.app/'})
+        return jsonify({'message': '로그인 성공', 'redirect': 'https://edmakers-gpts.streamlit.app/'})
     return jsonify({'message': 'ID 혹은 비밀번호가 잘못되었습니다.', 'category': 'error'}), 401
 
 @app.route('/admin')
@@ -177,7 +177,7 @@ def check_code():
     if secret_code == codes["admin_code"]:
         return jsonify({"message": "관리자 코드가 입력되었습니다. 관리자 페이지로 이동합니다.", "redirect": url_for("index")})
     elif secret_code == codes["user_code"]:
-        return jsonify({"message": "사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.", "redirect": 'https://edmakers-gpt.streamlit.app/'})
+        return jsonify({"message": "사용자 코드가 입력되었습니다. Chat GPT로 이동합니다.", "redirect": 'https://edmakers-gpts.streamlit.app/'})
     else:
         return jsonify({"message": "잘못된 코드입니다.", "redirect": url_for("cod")}), 400
 
